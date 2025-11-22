@@ -2,7 +2,7 @@ name: Auto Gmail to Google Drive
 
 on:
   schedule:
-    - cron: "44 1 * * *"   # chạy hàng ngày lúc 5:00 sáng VN (UTC+7)
+    - cron: "57 1 * * *"   # chạy hàng ngày lúc 5:00 sáng VN (UTC+7)
   workflow_dispatch:
 
 jobs:
@@ -26,4 +26,5 @@ jobs:
         echo "${{ secrets.GCP_KEY }}" > service_account.json
 
     - name: Run Python
+      working-directory: ${{ github.workspace }}
       run: python main.py
