@@ -1,29 +1,31 @@
-name: Auto Gmail to Google Sheet
+name: Auto Gmail to Google Drive
 
 on:
   schedule:
-    - cron: "13 2 * * *"  # chạy hàng ngày 5h sáng VN (UTC+7) → 22:00 UTC
+    # 9h05 sáng VN (UTC+7) = 02:05 UTC
+    - cron: "28 6 * * *"
   workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
 
+    env:
+      GCP_CLIENT_ID: ${{ secrets.GCP_CLIENT_ID }}
+      GCP_CLIENT_SECRET: ${{ secrets.GCP_CLIENT_SECRET }}
+      GCP_REFRESH_TOKEN: ${{ secrets.GCP_REFRESH_TOKEN }}
+
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install packages
-      run: pip install -r requirements.txt
+      - name: Install packages
+        run: pip install -r requirements.txt
 
-    - name: Create service_account.json
-      run: |
-        echo "${{ secrets.GCP_KEY }}" > service_account.json
-
-    - name: Run script
-      run: python main.py
+      - name: Run Python
+        run: python main.py
