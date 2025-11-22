@@ -1,20 +1,29 @@
-name: Run Python Daily
+name: Auto Gmail to Google Drive
 
 on:
   schedule:
-    - cron: "0 20 * * *"
+    - cron: "44 1 * * *"   # chạy hàng ngày lúc 5:00 sáng VN (UTC+7)
   workflow_dispatch:
 
 jobs:
-  run-python:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
 
-      - name: Run script
-        run: python main.py
+    - name: Install packages
+      run: pip install -r requirements.txt
+
+    - name: Create service_account.json
+      run: |
+        echo "${{ secrets.GCP_KEY }}" > service_account.json
+
+    - name: Run Python
+      run: python main.py
