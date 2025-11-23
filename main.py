@@ -46,10 +46,40 @@ def get_services():
     return gmail, drive
 
 
+# ============================================
+# HÀM XÓA TẤT CẢ FILE TRONG FOLDER TRÊN DRIVE
+# ============================================
+
+def delete_all_files_in_drive_folder(drive, folder_id):
+    """
+    Xóa (move to trash) toàn bộ file trong Google Drive folder.
+    """
+    query = f"'{folder_id}' in parents"
+    results = drive.files().list(q=query, fields="files(id, name)").execute()
+
+    files = results.get("files", [])
+    if not files:
+        print("📂 Thư mục rỗng — không có gì để xóa.")
+        return
+
+    for f in files:
+        drive.files().update(
+            fileId=f["id"],
+            body={"trashed": True}
+        ).execute()
+        print(f"🗑️ Đã xóa file: {f['name']} ({f['id']})")
+
+    print("🎉 Đã xóa toàn bộ file trong thư mục.")
+
+
+# ============================================
+# DOWNLOAD EXCEL FROM GMAIL
+# ============================================
+
 def download_latest_excel(gmail):
     """
     Tìm email mới nhất có file .xlsx, tải file về,
-    TRẢ VỀ: (filename, msg_id) nếu có, hoặc (None, None) nếu không có.
+    TRẢ VỀ: (filename, msg_id)
     """
     results = gmail.users().messages().list(
         userId="me",
@@ -85,12 +115,15 @@ def download_latest_excel(gmail):
                 f.write(data)
 
             print("Đã tải file:", filename)
-            # TRẢ VỀ kèm msg_id để lát nữa còn xóa email này
             return filename, msg_id
 
     print("Không có file .xlsx trong email")
     return None, None
 
+
+# ============================================
+# UPLOAD TO DRIVE
+# ============================================
 
 def upload_to_drive(drive, filename):
     file_metadata = {
@@ -109,11 +142,11 @@ def upload_to_drive(drive, filename):
     return uploaded.get("id")
 
 
+# ============================================
+# DELETE GMAIL MESSAGE
+# ============================================
+
 def delete_email_with_excel(gmail, msg_id):
-    """
-    Đưa email vào Trash sau khi đã xử lý xong file Excel.
-    Nếu muốn xóa vĩnh viễn thì dùng .delete thay vì .trash.
-    """
     if not msg_id:
         return
 
@@ -121,15 +154,25 @@ def delete_email_with_excel(gmail, msg_id):
     print(f"Đã chuyển email {msg_id} vào Trash.")
 
 
+# ============================================
+# MAIN
+# ============================================
+
 def main():
     gmail, drive = get_services()
 
+    # 1) Xóa toàn bộ file trong folder trước khi import file mới
+    print("🔄 Đang dọn thư mục Drive trước khi xử lý...")
+    delete_all_files_in_drive_folder(drive, DRIVE_FOLDER_ID)
+
+    # 2) Tải file Excel mới nhất từ Gmail
     filename, msg_id = download_latest_excel(gmail)
+
     if filename:
-        # Xử lý: upload file lên Drive
+        # 3) Upload Excel lên Drive
         upload_to_drive(drive, filename)
 
-        # Sau khi xử lý xong -> xóa (move to trash) email chứa file Excel
+        # 4) Xóa email chứa file Excel sau khi xử lý xong
         delete_email_with_excel(gmail, msg_id)
 
 
