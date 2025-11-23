@@ -1,7 +1,7 @@
-from __future__ import print_function
+from __future__ import print_function 
 import base64
 import os
-import pandas as pd
+import pandas as pd  # hiện chưa dùng nhưng cứ để nếu sau này xử lý excel
 
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -15,7 +15,8 @@ QUERY = "has:attachment filename:xlsx"  # Gmail search
 DRIVE_FOLDER_ID = "12t79mueDBK6F7wtfRHIputY0IQ2jiJ9w"   # Folder Google Drive
 
 SCOPES = [
-    "https://www.googleapis.com/auth/gmail.readonly",
+    # ĐỔI scope read-only -> modify để được phép xóa/move to trash
+    "https://www.googleapis.com/auth/gmail.modify",
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets",
 ]
@@ -46,6 +47,10 @@ def get_services():
 
 
 def download_latest_excel(gmail):
+    """
+    Tìm email mới nhất có file .xlsx, tải file về,
+    TRẢ VỀ: (filename, msg_id) nếu có, hoặc (None, None) nếu không có.
+    """
     results = gmail.users().messages().list(
         userId="me",
         q=QUERY,
@@ -55,7 +60,7 @@ def download_latest_excel(gmail):
     messages = results.get("messages", [])
     if not messages:
         print("Không tìm thấy email có file Excel")
-        return None
+        return None, None
 
     msg_id = messages[0]["id"]
     message = gmail.users().messages().get(userId="me", id=msg_id).execute()
@@ -80,10 +85,11 @@ def download_latest_excel(gmail):
                 f.write(data)
 
             print("Đã tải file:", filename)
-            return filename
+            # TRẢ VỀ kèm msg_id để lát nữa còn xóa email này
+            return filename, msg_id
 
     print("Không có file .xlsx trong email")
-    return None
+    return None, None
 
 
 def upload_to_drive(drive, filename):
@@ -103,12 +109,28 @@ def upload_to_drive(drive, filename):
     return uploaded.get("id")
 
 
+def delete_email_with_excel(gmail, msg_id):
+    """
+    Đưa email vào Trash sau khi đã xử lý xong file Excel.
+    Nếu muốn xóa vĩnh viễn thì dùng .delete thay vì .trash.
+    """
+    if not msg_id:
+        return
+
+    gmail.users().messages().trash(userId="me", id=msg_id).execute()
+    print(f"Đã chuyển email {msg_id} vào Trash.")
+
+
 def main():
     gmail, drive = get_services()
 
-    filename = download_latest_excel(gmail)
+    filename, msg_id = download_latest_excel(gmail)
     if filename:
+        # Xử lý: upload file lên Drive
         upload_to_drive(drive, filename)
+
+        # Sau khi xử lý xong -> xóa (move to trash) email chứa file Excel
+        delete_email_with_excel(gmail, msg_id)
 
 
 if __name__ == "__main__":
