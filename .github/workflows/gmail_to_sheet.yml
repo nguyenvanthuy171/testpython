@@ -3,7 +3,7 @@ name: Auto Gmail to Google Drive
 on:
   schedule:
     # 9h05 sáng VN (UTC+7) = 02:05 UTC
-    - cron: "0 0 * * *"
+    - cron: "0 22 * * *"
   workflow_dispatch:
 
 jobs:
